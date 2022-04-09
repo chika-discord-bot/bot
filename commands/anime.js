@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
-const { MessageEmbed, DiscordAPIError } = require("discord.js");
+const { MessageEmbed } = require("discord.js");
 const { results } = require("../utils/results.js");
 const fetch = require("node-fetch");
 
@@ -38,8 +38,8 @@ module.exports = {
             interaction
                 .editReply(`No results found for **${q}**.`)
                 .then((msg) => {
-                    msg.reaction.removeAll();
-                    setTimeout(() => msg.delete().catch((error) => { onError(error, interaction) }), 10000);
+                    msg.reaction.removeAll().catch((error) => { });
+                    setTimeout(() => msg.delete().catch((error) => { }), 10000);
                 })
                 .catch((error) => {
                     onError(error, interaction)
@@ -101,16 +101,19 @@ module.exports = {
                         } catch (error) {
                             console.error("Failed to remove reactions.");
                         }
+                        return data;
                     });
                     collector.on("end", (collected) => {
                         if (collected === "time") {
                             interaction
                                 .editReply(`Timeout error, please try again`)
                                 .then((msg) => {
-                                    setTimeout(() => msg.delete().catch((error) => { onError(error, interaction) }), 10000);
+                                    msg.reaction.removeAll().catch((error) => { });
+                                    setTimeout(() => msg.delete().catch((error) => { }), 10000);
                                 })
                                 .catch((error) => {
                                     onError(error, interaction)
+                                    console.log("error was here");
                                 });;
                         }
                     });
@@ -230,8 +233,8 @@ module.exports = {
                                 interaction
                                     .editReply("The action was canceled.")
                                     .then((msg) => {
-                                        msg.reactions.removeAll();
-                                        setTimeout(() => msg.delete().catch((error) => { onError(error, interaction) }), 10000);
+                                        msg.reactions.removeAll().catch((error) => { });
+                                        setTimeout(() => msg.delete().catch((error) => { }), 10000);
                                     })
                                     .catch((error) => {
                                         onError(error, interaction)
@@ -240,25 +243,26 @@ module.exports = {
                                 interaction
                                     .editReply("An invalid input was provided. Please try again.")
                                     .then((msg) => {
-                                        msg.reactions.removeAll();
-                                        setTimeout(() => msg.delete().catch((error) => { onError(error, interaction) }), 10000);
+                                        msg.reactions.removeAll().catch((error) => { });
+                                        setTimeout(() => msg.delete().catch((error) => { }), 10000);
                                     })
                                     .catch((error) => {
                                         onError(error, interaction)
                                     });;
                             }
                         }
-                        collected.first().delete().catch((error) => { onError(error, interaction) });
+                        collected.first().delete().catch((error) => { });
                     })
                     .catch(() => {
                         interaction
                             .editReply(`Timeout error, please try again`)
                             .then((msg) => {
-                                msg.reaction.removeAll();
-                                setTimeout(() => msg.delete().catch((error) => { onError(error, interaction) }), 10000);
+                                msg.reactions.removeAll().catch((error) => { });
+                                setTimeout(() => msg.delete().catch((error) => { }), 10000);
                             })
                             .catch((error) => {
                                 onError(error, interaction)
+                                console.log("error was here");
                             });;
                     });
             });

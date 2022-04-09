@@ -1,3 +1,4 @@
+const maxResultsPerPage = 25;
 function results(data, name, query, type, pagination, page) {
     resultList = [];
     for (let i = 0; i < data.length; i++) {
@@ -7,7 +8,7 @@ function results(data, name, query, type, pagination, page) {
     if (pagination.last_visible_page === 1) {
         resultsSummary = `Found ${data.length} ${type} matching **${query}**.`
     } else {
-        resultsSummary = `Found ${data.length * (pagination.last_visible_page - 1)}+ ${type} matching **${query}**. (Page ${page}/${pagination.last_visible_page})`
+        resultsSummary = `Found ${maxResultsPerPage * (pagination.last_visible_page - 1)}+ ${type} matching **${query}**. (Page ${page}/${pagination.last_visible_page})`
     }
     let results = resultList.join('\n');
     let userInstructions = `Please type the number corresponding to your selection, or press 'c' to cancel.`;
