@@ -9,12 +9,12 @@ const timeoutTime = 60000;
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName("anime")
-        .setDescription("Gives you information about any anime on MyAnimeList!")
+        .setName("manga")
+        .setDescription("Gives you information about any manga on MyAnimeList!")
         .addStringOption((option) =>
             option
                 .setName("title")
-                .setDescription("The title of the anime you want to look up.")
+                .setDescription("The title of the manga you want to look up.")
                 .setRequired(true)
         ),
     async execute(interaction) {
@@ -23,22 +23,23 @@ module.exports = {
         let query = new URLSearchParams({ q });
 
         let { pagination, data } = await fetch(
-            `https://api.jikan.moe/v4/anime?${query}&order_by=members&sort=desc&page=1`
+            `https://api.jikan.moe/v4/manga?${query}&order_by=members&sort=desc&page=1`
         ).then((response) => response.json());
 
         let page = 1;
-        let animeIndex = -1;
+        let mangaIndex = -1;
         if (data.length == 0) {
             interaction
                 .editReply(`No results found for **${q}**.`)
                 .then((msg) => {
+                    // msg.reaction.removeAll().catch((error) => { });
                     setTimeout(() => msg.delete().catch((error) => { }), 10000);
                 })
                 .catch((error) => {
                     onErrorReply(error, interaction)
                 });;
         } else {
-            let output = results(data, "title", q, "anime", pagination, page);
+            let output = results(data, "title", q, "manga", pagination, page);
             interaction.editReply(output, { fetchReply: true }).then((message) => {
                 if (pagination.last_visible_page > 1) {
                     message.react("⏪").then(() => message.react("⏩")).catch(() => { });
@@ -58,10 +59,10 @@ module.exports = {
                                 page++;
                                 data = (
                                     await fetch(
-                                        `https://api.jikan.moe/v4/anime?${query}&order_by=members&sort=desc&page=${page}`
+                                        `https://api.jikan.moe/v4/manga?${query}&order_by=members&sort=desc&page=${page}`
                                     ).then((response) => response.json())
                                 )["data"];
-                                output = results(data, "title", q, "anime", pagination, page);
+                                output = results(data, "title", q, "manga", pagination, page);
                                 interaction
                                     .editReply(output)
                                     .catch((error) => {
@@ -73,10 +74,10 @@ module.exports = {
                                 page--;
                                 data = (
                                     await fetch(
-                                        `https://api.jikan.moe/v4/anime?${query}&order_by=members&sort=desc&page=${page}`
+                                        `https://api.jikan.moe/v4/manga?${query}&order_by=members&sort=desc&page=${page}`
                                     ).then((response) => response.json())
                                 )["data"];
-                                output = results(data, "title", q, "anime", pagination, page);
+                                output = results(data, "title", q, "manga", pagination, page);
                                 interaction
                                     .editReply(output)
                                     .catch((error) => {
@@ -94,6 +95,7 @@ module.exports = {
                         } catch (error) {
                             console.error("Failed to remove reactions.");
                         }
+                        return data;
                     });
                     collector.on("end", (collected) => {
                         if (collected === "time") {
@@ -121,92 +123,92 @@ module.exports = {
                         errors: ["time"],
                     })
                     .then((collected) => {
-                        animeIndex = parseInt(collected.first().content);
+                        mangaIndex = parseInt(collected.first().content);
                         if (
-                            !isNaN(animeIndex) &&
-                            animeIndex > 0 &&
-                            animeIndex <= data.length
+                            !isNaN(mangaIndex) &&
+                            mangaIndex > 0 &&
+                            mangaIndex <= data.length
                         ) {
                             interaction
                                 .editReply(`Loading result ${collected.first().content}...`)
                                 .then(() => {
-                                    anime = data[animeIndex - 1];
+                                    manga = data[mangaIndex - 1];
                                     let embed = new MessageEmbed()
                                         .setColor("#F37A12")
-                                        .setTitle(anime["title"])
-                                        .setURL(anime["url"])
-                                        .setThumbnail(anime["images"]["jpg"]["image_url"]);
-                                    if (anime["synopsis"] === null) {
+                                        .setTitle(manga["title"])
+                                        .setURL(manga["url"])
+                                        .setThumbnail(manga["images"]["jpg"]["image_url"]);
+                                    if (manga["synopsis"] === null) {
                                         embed.setDescription("No synopsis available.");
                                     } else {
-                                        embed.setDescription(anime["synopsis"]);
+                                        embed.setDescription(manga["synopsis"]);
                                     }
-                                    if (anime["score"] === null) {
+                                    if (manga["score"] === null) {
                                         embed.addField("Score", "N/A", true);
                                     } else {
-                                        embed.addField("Score", anime["score"].toString(), true);
+                                        embed.addField("Score", manga["score"].toString(), true);
                                     }
-                                    if (anime["members"] === null) {
+                                    if (manga["members"] === null) {
                                         embed.addField("Members", "N/A", true);
                                     } else {
                                         embed.addField(
                                             "Members",
-                                            anime["members"].toString(),
+                                            manga["members"].toString(),
                                             true
                                         );
                                     }
-                                    if (anime["aired"]["from"] === null) {
+                                    if (manga["published"]["from"] === null) {
                                         embed.addField("Start Date", "Unknown", true);
                                     } else {
                                         embed.addField(
                                             "Start Date",
-                                            anime["aired"]["from"].substring(0, 10),
+                                            manga["published"]["from"].substring(0, 10),
                                             true
                                         );
                                     }
-                                    if (anime["aired"]["to"] === null) {
+                                    if (manga["published"]["to"] === null) {
                                         embed.addField("End Date", "Unknown", true);
                                     } else {
                                         embed.addField(
                                             "End Date",
-                                            anime["aired"]["to"].substring(0, 10),
+                                            manga["published"]["to"].substring(0, 10),
                                             true
                                         );
                                     }
-                                    if (anime["episodes"] === null) {
-                                        embed.addField("Episode Count", "Unknown", true);
+                                    if (manga["chapters"] === null) {
+                                        embed.addField("Chapter Count", "Unknown", true);
                                     } else {
                                         embed.addField(
-                                            "Episode Count",
-                                            anime["episodes"].toString(),
+                                            "Chapter Count",
+                                            manga["chapters"].toString(),
                                             true
                                         );
                                     }
-                                    if (anime["type"] === null) {
+                                    if (manga["type"] === null) {
                                         embed.addField("Type", "Unknown", true);
                                     } else {
-                                        embed.addField("Type", anime["type"], true);
+                                        embed.addField("Type", manga["type"], true);
                                     }
-                                    // try {
-                                    let genre = anime["genres"];
-                                    let tmp = [];
-                                    for (let i = 0; i < genre.length; i++) {
-                                        tmp.push(genre[i]["name"]);
+                                    try {
+                                        let genre = manga["genres"];
+                                        let tmp = [];
+                                        for (let i = 0; i < genre.length; i++) {
+                                            tmp.push(genre[i]["name"]);
+                                        }
+                                        let genres = tmp.join(", ");
+                                        if (genres === "") genres = "None";
+                                        embed.addField("Genres", genres, false);
+                                    } catch {
+                                        console.error(
+                                            "An error occured when embedding the genres."
+                                        );
                                     }
-                                    let genres = tmp.join(", ");
-                                    if (genres === "") genres = "None";
-                                    embed.addField("Genres", genres, false);
-                                    // } catch {
-                                    console.error(
-                                        "An error occured when embedding the genres."
-                                    );
-                                    // }
-                                    if (anime["type"] !== null && anime["type"] !== "Music" && anime['score'] !== null) {
-                                        q = anime.title;
-                                        query = new URLSearchParams({ q });
+                                    if (manga["type"] !== null && manga["type"] !== "music" && manga['score'] !== null) {
+                                        let name = manga.title;
+                                        query = new URLSearchParams({ name });
                                         embed.addField(
-                                            `Stream`,
-                                            `[Link](https://animixplay.to/?${query}&sengine=gogo)`,
+                                            `Read`,
+                                            `[Link](https://manga4life.com/search/?sort=s&desc=false&${query})`,
                                             true
                                         );
                                     }
