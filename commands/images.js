@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { MessageEmbed } = require('discord.js');
+// const paginator = require('discord.js-pagination');
 const { results } = require('../utils/results.js');
 const { onErrorReply, onErrorLog } = require('../utils/error.js');
 
@@ -9,27 +10,27 @@ const timeoutTime = 60000;
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('manga')
-        .setDescription('Gives you information about any manga on MyAnimeList!')
+        .setName('images')
+        .setDescription('Gives you images for any character on MyAnimeList!')
         .addStringOption((option) =>
             option
-                .setName('title')
-                .setDescription('The title of the manga you want to look up.')
+                .setName('name')
+                .setDescription('The name of the character you want to find images of.')
                 .setRequired(true),
         ),
     async execute(interaction) {
         await interaction.deferReply();
-        const q = interaction.options.getString('title');
-        let query = new URLSearchParams({ q });
+        const q = interaction.options.getString('name');
+        const query = new URLSearchParams({ q });
 
         const jikanResponse = await fetch(
-            `https://api.jikan.moe/v4/manga?${query}&order_by=members&sort=desc&page=1`,
+            `https://api.jikan.moe/v4/characters?${query}&order_by=favorites&sort=desc&page=1`,
         ).then((response) => response.json());
         const { pagination } = jikanResponse;
         let { data } = jikanResponse;
 
         let page = 1;
-        let mangaIndex = -1;
+        let characterIndex = -1;
         if (data.length == 0) {
             interaction
                 .editReply(`No results found for \`${q}\`.`)
@@ -40,7 +41,7 @@ module.exports = {
                     onErrorReply(error, interaction);
                 });
         } else {
-            let output = results(data, 'title', q, 'manga', pagination, page);
+            let output = results(data, 'name', q, 'character', pagination, page);
             interaction.editReply(output, { fetchReply: true }).then((message) => {
                 if (pagination.last_visible_page > 1) {
                     message.react('⏪').then(() => message.react('⏩')).catch((error) => { onErrorLog(error); });
@@ -60,10 +61,10 @@ module.exports = {
                                 page++;
                                 data = (
                                     await fetch(
-                                        `https://api.jikan.moe/v4/manga?${query}&order_by=members&sort=desc&page=${page}`,
+                                        `https://api.jikan.moe/v4/characters?${query}&order_by=favorites&sort=desc&page=${page}`,
                                     ).then((response) => response.json())
                                 )['data'];
-                                output = results(data, 'title', q, 'manga', pagination, page);
+                                output = results(data, 'name', q, 'character', pagination, page);
                                 interaction
                                     .editReply(output)
                                     .catch((error) => {
@@ -74,10 +75,10 @@ module.exports = {
                             page--;
                             data = (
                                 await fetch(
-                                    `https://api.jikan.moe/v4/manga?${query}&order_by=members&sort=desc&page=${page}`,
+                                    `https://api.jikan.moe/v4/characters?${query}&order_by=favorites&sort=desc&page=${page}`,
                                 ).then((response) => response.json())
                             )['data'];
-                            output = results(data, 'title', q, 'manga', pagination, page);
+                            output = results(data, 'name', q, 'character', pagination, page);
                             interaction
                                 .editReply(output)
                                 .catch((error) => {
@@ -94,7 +95,6 @@ module.exports = {
                         } catch (error) {
                             console.error('Failed to remove reactions.');
                         }
-                        return data;
                     });
                     collector.on('end', (collected) => {
                         if (collected === 'time') {
@@ -122,101 +122,80 @@ module.exports = {
                         errors: ['time'],
                     })
                     .then((collected) => {
-                        mangaIndex = parseInt(collected.first().content);
+                        characterIndex = parseInt(collected.first().content);
                         if (
-                            !isNaN(mangaIndex) &&
-                            mangaIndex > 0 &&
-                            mangaIndex <= data.length
+                            !isNaN(characterIndex) &&
+                            characterIndex > 0 &&
+                            characterIndex <= data.length
                         ) {
                             interaction
                                 .editReply(`Loading result ${collected.first().content}...`)
-                                .then(() => {
-                                    const manga = data[mangaIndex - 1];
-                                    const embed = new MessageEmbed()
-                                        .setColor('#F37A12')
-                                        .setTitle(manga['title'])
-                                        .setURL(manga['url'])
-                                        .setThumbnail(manga['images']['jpg']['image_url']);
-                                    if (manga['synopsis'] === null) {
-                                        embed.setDescription('No synopsis available.');
-                                    } else {
-                                        embed.setDescription(manga['synopsis']);
+                                .then(async () => {
+                                    const character = data[characterIndex - 1];
+                                    const characterid = character['mal_id'];
+
+                                    const imageUrls = await fetch(
+                                        `https://api.jikan.moe/v4/characters/${characterid}/pictures`,
+                                    ).then((response) => response.json());
+
+                                    const embeds = [];
+                                    const embedLength = Math.min(imageUrls['data'].length, 10);
+                                    for (let i = 0; i < embedLength; i++) {
+                                        const embed = new MessageEmbed()
+                                            .setColor('#F37A12')
+                                            .setTitle(character['name'])
+                                            .setURL(character['url'])
+                                            .setDescription(`**Favorites**: ${character['favorites']}`)
+                                            .setImage(imageUrls['data'][i]['jpg']['image_url'])
+                                            .setFooter({ text: `${i + 1} / ${embedLength}` });
+                                        embeds.push(embed);
                                     }
-                                    if (manga['score'] === null) {
-                                        embed.addField('Score', 'N/A', true);
-                                    } else {
-                                        embed.addField('Score', manga['score'].toString(), true);
-                                    }
-                                    if (manga['members'] === null) {
-                                        embed.addField('Members', 'N/A', true);
-                                    } else {
-                                        embed.addField(
-                                            'Members',
-                                            manga['members'].toString(),
-                                            true,
-                                        );
-                                    }
-                                    if (manga['published']['from'] === null) {
-                                        embed.addField('Start Date', 'Unknown', true);
-                                    } else {
-                                        embed.addField(
-                                            'Start Date',
-                                            manga['published']['from'].substring(0, 10),
-                                            true,
-                                        );
-                                    }
-                                    if (manga['published']['to'] === null) {
-                                        embed.addField('End Date', 'Unknown', true);
-                                    } else {
-                                        embed.addField(
-                                            'End Date',
-                                            manga['published']['to'].substring(0, 10),
-                                            true,
-                                        );
-                                    }
-                                    if (manga['chapters'] === null) {
-                                        embed.addField('Chapter Count', 'Unknown', true);
-                                    } else {
-                                        embed.addField(
-                                            'Chapter Count',
-                                            manga['chapters'].toString(),
-                                            true,
-                                        );
-                                    }
-                                    if (manga['type'] === null) {
-                                        embed.addField('Type', 'Unknown', true);
-                                    } else {
-                                        embed.addField('Type', manga['type'], true);
-                                    }
-                                    try {
-                                        const genre = manga['genres'];
-                                        const tmp = [];
-                                        for (let i = 0; i < genre.length; i++) {
-                                            tmp.push(genre[i]['name']);
-                                        }
-                                        let genres = tmp.join(', ');
-                                        if (genres === '') genres = 'None';
-                                        embed.addField('Genres', genres, false);
-                                    } catch {
-                                        console.error(
-                                            'An error occured when embedding the genres.',
-                                        );
-                                    }
-                                    if (manga['type'] !== null && manga['type'] !== 'music' && manga['score'] !== null) {
-                                        const name = manga.title;
-                                        query = new URLSearchParams({ name });
-                                        embed.addField(
-                                            'Read',
-                                            `[Link](https://manga4life.com/search/?sort=s&desc=false&${query})`,
-                                            true,
-                                        );
-                                    }
+
                                     interaction.deleteReply().catch((error) => {
                                         onErrorReply(error, interaction);
                                     });
-                                    interaction.channel.send({ embeds: [embed] }).catch((error) => {
-                                        onErrorReply(error, interaction);
-                                    });
+                                    page = 1;
+                                    interaction.channel.send({ embeds: [embeds[page - 1]] })
+                                        .then((msg) => {
+                                            msg.react('⏪').then(() => msg.react('⏩')).catch((error) => { onErrorLog(error); });
+                                            const reactionFilter = (reaction, user) => {
+                                                return (
+                                                    ['⏪', '⏩'].includes(reaction.emoji.name) &&
+                                                    user.id === interaction.user.id
+                                                );
+                                            };
+                                            const collector = msg.createReactionCollector({
+                                                filter: reactionFilter,
+                                                time: timeoutTime,
+                                            });
+                                            collector.on('collect', async (reaction, user) => {
+                                                if (reaction.emoji.name === '⏩') {
+                                                    if (embedLength > page) {
+                                                        page++;
+                                                    }
+                                                } else if (page > 1) {
+                                                    page--;
+                                                }
+                                                msg.edit({ embeds: [embeds[page - 1]] }).catch((error) => { onErrorLog(error); });
+                                                const userReactions = msg.reactions.cache.filter((currentReaction) =>
+                                                    currentReaction.users.cache.has(user.id),
+                                                );
+                                                try {
+                                                    for (const currentReaction of userReactions.values()) {
+                                                        await currentReaction.users.remove(user.id);
+                                                    }
+                                                } catch (error) {
+                                                    console.error('Failed to remove reactions.');
+                                                }
+                                            });
+                                            collector.on('end', () => {
+                                                msg.reactions.removeAll().catch((error) => { onErrorLog(error); });
+                                            });
+
+                                        })
+                                        .catch((error) => {
+                                            onErrorReply(error, interaction);
+                                        });
                                 })
                                 .catch((error) => {
                                     onErrorReply(error, interaction);
@@ -226,7 +205,7 @@ module.exports = {
                                 .editReply('The action was canceled.')
                                 .then((msg) => {
                                     msg.reactions.removeAll().catch((error) => { onErrorLog(error); });
-                                    setTimeout(() => msg.delete().catch((error) => { onErrorLog(error); }, 10000));
+                                    setTimeout(() => msg.delete().catch((error) => { onErrorLog(error); }), 10000);
                                 })
                                 .catch((error) => {
                                     onErrorReply(error, interaction);

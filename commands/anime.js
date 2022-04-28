@@ -99,7 +99,7 @@ module.exports = {
                             interaction
                                 .editReply('Timeout error, please try again')
                                 .then((msg) => {
-                                    msg.reaction.removeAll().catch((error) => { onErrorLog(error); });
+                                    msg.reactions.removeAll().catch((error) => { onErrorLog(error); });
                                     setTimeout(() => msg.delete().catch((error) => { onErrorLog(error); }), 10000);
                                 })
                                 .catch((error) => {
