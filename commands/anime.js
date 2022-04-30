@@ -3,11 +3,9 @@ const { MessageEmbed } = require('discord.js');
 const { results } = require('../utils/results.js');
 const { paginator } = require('../utils/paginator.js');
 const { onErrorReply, onErrorLog } = require('../utils/error.js');
-const { API_ENDPOINT_ANIME } = require('../utils/constants.js');
+const { API_ENDPOINT_ANIME, TIMEOUT_TIME } = require('../utils/constants.js');
 
 const fetch = require('node-fetch');
-
-const timeoutTime = 60000;
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -58,7 +56,7 @@ module.exports = {
                     .awaitMessages({
                         filter: messageFilter,
                         max: 1,
-                        time: timeoutTime,
+                        time: TIMEOUT_TIME,
                         errors: ['time'],
                     })
                     .then((collected) => {

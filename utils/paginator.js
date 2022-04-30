@@ -1,8 +1,7 @@
 const { onErrorReply, onErrorLog } = require('../utils/error.js');
 const { results } = require('../utils/results.js');
+const { TIMEOUT_TIME } = require('../utils/constants.js');
 const fetch = require('node-fetch');
-
-const timeoutTime = 60000;
 
 function paginator(interaction, data, pagination, message, page, params) {
     if (pagination.last_visible_page > 1) {
@@ -15,7 +14,7 @@ function paginator(interaction, data, pagination, message, page, params) {
         };
         const collector = message.createReactionCollector({
             filter: reactionFilter,
-            time: timeoutTime,
+            time: TIMEOUT_TIME,
         });
         collector.on('collect', async (reaction, user) => {
             if (reaction.emoji.name === '⏩') {
@@ -28,11 +27,14 @@ function paginator(interaction, data, pagination, message, page, params) {
                     )['data'];
                     [].splice.apply(data, [0, data.length].concat(tmp));
                     const output = results(data, params.name, params.q, params.type, pagination, page);
-                    interaction
-                        .editReply(output)
-                        .catch((error) => {
-                            onErrorReply(error, interaction);
-                        });
+                    console.log(collector.ended);
+                    if (!collector.ended) {
+                        interaction
+                            .editReply(output)
+                            .catch((error) => {
+                                onErrorReply(error, interaction);
+                            });
+                    }
                 }
             } else if (page > 1) {
                 page--;
@@ -43,11 +45,13 @@ function paginator(interaction, data, pagination, message, page, params) {
                 )['data'];
                 [].splice.apply(data, [0, data.length].concat(tmp));
                 const output = results(data, params.name, params.q, params.type, pagination, page);
-                interaction
-                    .editReply(output)
-                    .catch((error) => {
-                        onErrorReply(error, interaction);
-                    });
+                if (!collector.ended) {
+                    interaction
+                        .editReply(output)
+                        .catch((error) => {
+                            onErrorReply(error, interaction);
+                        });
+                }
             }
             const userReactions = message.reactions.cache.filter((currentReaction) =>
                 currentReaction.users.cache.has(user.id),
