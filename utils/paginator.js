@@ -27,7 +27,6 @@ function paginator(interaction, data, pagination, message, page, params) {
                     )['data'];
                     [].splice.apply(data, [0, data.length].concat(tmp));
                     const output = results(data, params.name, params.q, params.type, pagination, page);
-                    console.log(collector.ended);
                     if (!collector.ended) {
                         interaction
                             .editReply(output)
