@@ -8,8 +8,8 @@
     "start": "node ./src/index.js"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Sai Maduri",
+  "license": "MIT",
   "dependencies": {
     "@discordjs/builders": "^0.12.0",
     "@discordjs/rest": "^0.3.0",
