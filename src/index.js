@@ -1,6 +1,7 @@
 const fs = require('node:fs');
+const path = require('path');
 const { Client, Intents, Collection } = require('discord.js');
-const { token } = require('./config.json');
+require('dotenv').config();
 
 const client = new Client({
     intents: [
@@ -12,7 +13,7 @@ const client = new Client({
 
 client.commands = new Collection();
 const commandFiles = fs
-    .readdirSync('./commands')
+    .readdirSync(path.resolve(__dirname, 'commands'))
     .filter((file) => file.endsWith('.js'));
 
 for (const file of commandFiles) {
@@ -42,4 +43,4 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-client.login(token);
+client.login(process.env.BOT_TOKEN);
