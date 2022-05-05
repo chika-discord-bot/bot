@@ -4,7 +4,7 @@ const API_ENDPOINT_CHARACTER = $ => `https://api.jikan.moe/v4/characters?${$.que
 const API_ENDPOINT_IMAGES = $ => `https://api.jikan.moe/v4/characters/${$.characterid}/pictures`;
 
 const TIMEOUT_TIME = 60000;
-const ERROR_TIMEOUT_TIME = 10000;
+const ERROR_TIMEOUT_TIME = 15000;
 const MAX_RESULTS_PER_PAGE = 25;
 const MAX_PAGE_COUNT = 4;
 

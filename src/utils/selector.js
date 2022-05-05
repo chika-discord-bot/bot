@@ -22,7 +22,7 @@ function selector(interaction, data, formatter) {
                 formatter(interaction, collected, data, index);
             } else if (collected.first().content.toLowerCase() === 'c') {
                 interaction
-                    .editReply('The action was canceled.')
+                    .editReply('The action was cancelled. Feel free to make another request!')
                     .then((msg) => {
                         msg.reactions.removeAll().catch((error) => { onErrorLog(error); });
                         setTimeout(() => msg.delete().catch((error) => { onErrorLog(error); }), ERROR_TIMEOUT_TIME);
@@ -32,7 +32,7 @@ function selector(interaction, data, formatter) {
                     });
             } else {
                 interaction
-                    .editReply('An invalid input was provided. Please try again.')
+                    .editReply('Whoops! That doesn\'t look like a valid input, please try again!')
                     .then((msg) => {
                         msg.reactions.removeAll().catch((error) => { onErrorLog(error); });
                         setTimeout(() => msg.delete().catch((error) => { onErrorLog(error); }), ERROR_TIMEOUT_TIME);
@@ -45,7 +45,7 @@ function selector(interaction, data, formatter) {
         })
         .catch(() => {
             interaction
-                .editReply('Timeout error, please try again')
+                .editReply('Hmm, it looks like I didn\'t get a response in time. Please try again!')
                 .then((msg) => {
                     msg.reactions.removeAll().catch((error) => { onErrorLog(error); });
                     setTimeout(() => msg.delete().catch((error) => { onErrorLog(error); }), ERROR_TIMEOUT_TIME);
