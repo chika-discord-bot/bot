@@ -2,134 +2,106 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 const { MessageEmbed } = require('discord.js');
 const { results } = require('../utils/results.js');
 const { paginator } = require('../utils/paginator.js');
+const { selector } = require('../utils/selector.js');
 const { onErrorReply, onErrorLog } = require('../utils/error.js');
-const { API_ENDPOINT_MANGA } = require('../utils/constants.js');
+const { API_ENDPOINT_MANGA, ERROR_TIMEOUT_TIME } = require('../utils/constants.js');
 
 const fetch = require('node-fetch');
-const { selector } = require('../utils/selector.js');
 
-function mangaFormatter(interaction, collected, data) {
-    const mangaIndex = parseInt(collected.first().content);
-    if (
-        !isNaN(mangaIndex) &&
-        mangaIndex > 0 &&
-        mangaIndex <= data.length
-    ) {
-        interaction
-            .editReply(`Loading result ${collected.first().content}...`)
-            .then(() => {
-                const manga = data[mangaIndex - 1];
-                const embed = new MessageEmbed()
-                    .setColor('#F37A12')
-                    .setTitle(manga['title'])
-                    .setURL(manga['url'])
-                    .setThumbnail(manga['images']['jpg']['image_url']);
-                if (manga['synopsis'] === null) {
-                    embed.setDescription('No synopsis available.');
-                } else {
-                    embed.setDescription(manga['synopsis']);
+function mangaFormatter(interaction, collected, data, index) {
+    interaction
+        .editReply(`Loading result ${collected.first().content}...`)
+        .then(() => {
+            const manga = data[index - 1];
+            const embed = new MessageEmbed()
+                .setColor('#F37A12')
+                .setTitle(manga['title'])
+                .setURL(manga['url'])
+                .setThumbnail(manga['images']['jpg']['image_url']);
+            if (manga['synopsis'] === null) {
+                embed.setDescription('No synopsis available.');
+            } else {
+                embed.setDescription(manga['synopsis']);
+            }
+            if (manga['score'] === null) {
+                embed.addField('Score', 'N/A', true);
+            } else {
+                embed.addField('Score', manga['score'].toString(), true);
+            }
+            if (manga['members'] === null) {
+                embed.addField('Members', 'N/A', true);
+            } else {
+                embed.addField(
+                    'Members',
+                    manga['members'].toString(),
+                    true,
+                );
+            }
+            if (manga['published']['from'] === null) {
+                embed.addField('Start Date', 'Unknown', true);
+            } else {
+                embed.addField(
+                    'Start Date',
+                    manga['published']['from'].substring(0, 10),
+                    true,
+                );
+            }
+            if (manga['published']['to'] === null) {
+                embed.addField('End Date', 'Unknown', true);
+            } else {
+                embed.addField(
+                    'End Date',
+                    manga['published']['to'].substring(0, 10),
+                    true,
+                );
+            }
+            if (manga['chapters'] === null) {
+                embed.addField('Chapter Count', 'Unknown', true);
+            } else {
+                embed.addField(
+                    'Chapter Count',
+                    manga['chapters'].toString(),
+                    true,
+                );
+            }
+            if (manga['type'] === null) {
+                embed.addField('Type', 'Unknown', true);
+            } else {
+                embed.addField('Type', manga['type'], true);
+            }
+            try {
+                const genre = manga['genres'];
+                const tmp = [];
+                for (let i = 0; i < genre.length; i++) {
+                    tmp.push(genre[i]['name']);
                 }
-                if (manga['score'] === null) {
-                    embed.addField('Score', 'N/A', true);
-                } else {
-                    embed.addField('Score', manga['score'].toString(), true);
-                }
-                if (manga['members'] === null) {
-                    embed.addField('Members', 'N/A', true);
-                } else {
-                    embed.addField(
-                        'Members',
-                        manga['members'].toString(),
-                        true,
-                    );
-                }
-                if (manga['published']['from'] === null) {
-                    embed.addField('Start Date', 'Unknown', true);
-                } else {
-                    embed.addField(
-                        'Start Date',
-                        manga['published']['from'].substring(0, 10),
-                        true,
-                    );
-                }
-                if (manga['published']['to'] === null) {
-                    embed.addField('End Date', 'Unknown', true);
-                } else {
-                    embed.addField(
-                        'End Date',
-                        manga['published']['to'].substring(0, 10),
-                        true,
-                    );
-                }
-                if (manga['chapters'] === null) {
-                    embed.addField('Chapter Count', 'Unknown', true);
-                } else {
-                    embed.addField(
-                        'Chapter Count',
-                        manga['chapters'].toString(),
-                        true,
-                    );
-                }
-                if (manga['type'] === null) {
-                    embed.addField('Type', 'Unknown', true);
-                } else {
-                    embed.addField('Type', manga['type'], true);
-                }
-                try {
-                    const genre = manga['genres'];
-                    const tmp = [];
-                    for (let i = 0; i < genre.length; i++) {
-                        tmp.push(genre[i]['name']);
-                    }
-                    let genres = tmp.join(', ');
-                    if (genres === '') genres = 'None';
-                    embed.addField('Genres', genres, false);
-                } catch {
-                    console.error(
-                        'An error occured when embedding the genres.',
-                    );
-                }
-                if (manga['type'] !== null && manga['type'] !== 'music' && manga['score'] !== null) {
-                    const name = manga.title;
-                    const query = new URLSearchParams({ name });
-                    embed.addField(
-                        'Read',
-                        `[Link](https://manga4life.com/search/?sort=s&desc=false&${query})`,
-                        true,
-                    );
-                }
-                interaction.deleteReply().catch((error) => {
-                    onErrorReply(error, interaction);
-                });
-                interaction.channel.send({ embeds: [embed] }).catch((error) => {
-                    onErrorReply(error, interaction);
-                });
-            })
-            .catch((error) => {
+                let genres = tmp.join(', ');
+                if (genres === '') genres = 'None';
+                embed.addField('Genres', genres, false);
+            } catch {
+                console.error(
+                    'An error occured when embedding the genres.',
+                );
+            }
+            if (manga['type'] !== null && manga['type'] !== 'music' && manga['score'] !== null) {
+                const name = manga.title;
+                const query = new URLSearchParams({ name });
+                embed.addField(
+                    'Read',
+                    `[Link](https://manga4life.com/search/?sort=s&desc=false&${query})`,
+                    true,
+                );
+            }
+            interaction.deleteReply().catch((error) => {
                 onErrorReply(error, interaction);
             });
-    } else if (collected.first().content.toLowerCase() === 'c') {
-        interaction
-            .editReply('The action was canceled.')
-            .then((msg) => {
-                msg.reactions.removeAll().catch((error) => { onErrorLog(error); });
-                setTimeout(() => msg.delete().catch((error) => { onErrorLog(error); }, 10000));
-            })
-            .catch((error) => {
+            interaction.channel.send({ embeds: [embed] }).catch((error) => {
                 onErrorReply(error, interaction);
             });
-    } else {
-        interaction
-            .editReply('An invalid input was provided. Please try again.')
-            .then((msg) => {
-                msg.reactions.removeAll().catch((error) => { onErrorLog(error); });
-                setTimeout(() => msg.delete().catch((error) => { onErrorLog(error); }), 10000);
-            })
-            .catch((error) => {
-                onErrorReply(error, interaction);
-            });
-    }
-    collected.first().delete().catch((error) => { onErrorLog(error); });
+        })
+        .catch((error) => {
+            onErrorReply(error, interaction);
+        });
 }
 
 module.exports = {
@@ -157,7 +129,7 @@ module.exports = {
             interaction
                 .editReply(`No results found for \`${q}\`.`)
                 .then((msg) => {
-                    setTimeout(() => msg.delete().catch((error) => { onErrorLog(error); }), 10000);
+                    setTimeout(() => msg.delete().catch((error) => { onErrorLog(error); }), ERROR_TIMEOUT_TIME);
                 })
                 .catch((error) => {
                     onErrorReply(error, interaction);

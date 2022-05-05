@@ -1,5 +1,5 @@
 const { onErrorReply, onErrorLog } = require('../utils/error.js');
-const { TIMEOUT_TIME } = require('../utils/constants.js');
+const { TIMEOUT_TIME, ERROR_TIMEOUT_TIME } = require('../utils/constants.js');
 
 function selector(interaction, data, formatter) {
     const messageFilter = (m) => {
@@ -13,18 +13,45 @@ function selector(interaction, data, formatter) {
             errors: ['time'],
         })
         .then((collected) => {
-            formatter(interaction, collected, data);
+            const index = parseInt(collected.first().content);
+            if (
+                !isNaN(index) &&
+                index > 0 &&
+                index <= data.length
+            ) {
+                formatter(interaction, collected, data, index);
+            } else if (collected.first().content.toLowerCase() === 'c') {
+                interaction
+                    .editReply('The action was canceled.')
+                    .then((msg) => {
+                        msg.reactions.removeAll().catch((error) => { onErrorLog(error); });
+                        setTimeout(() => msg.delete().catch((error) => { onErrorLog(error); }), ERROR_TIMEOUT_TIME);
+                    })
+                    .catch((error) => {
+                        onErrorReply(error, interaction);
+                    });
+            } else {
+                interaction
+                    .editReply('An invalid input was provided. Please try again.')
+                    .then((msg) => {
+                        msg.reactions.removeAll().catch((error) => { onErrorLog(error); });
+                        setTimeout(() => msg.delete().catch((error) => { onErrorLog(error); }), ERROR_TIMEOUT_TIME);
+                    })
+                    .catch((error) => {
+                        onErrorReply(error, interaction);
+                    });
+            }
+            collected.first().delete().catch((error) => { onErrorLog(error); });
         })
         .catch(() => {
             interaction
                 .editReply('Timeout error, please try again')
                 .then((msg) => {
                     msg.reactions.removeAll().catch((error) => { onErrorLog(error); });
-                    setTimeout(() => msg.delete().catch((error) => { onErrorLog(error); }), 10000);
+                    setTimeout(() => msg.delete().catch((error) => { onErrorLog(error); }), ERROR_TIMEOUT_TIME);
                 })
                 .catch((error) => {
                     onErrorReply(error, interaction);
-                    console.log('error was here');
                 });
         });
 }
