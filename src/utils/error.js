@@ -1,12 +1,18 @@
-async function onErrorReply(error, interaction) {
-    console.log(error);
-    await interaction.channel.send({
-        content: `<@${interaction.user.id}>There was an error while executing this command! Please try again.`,
+const { ERROR_TIMEOUT_TIME } = require('../utils/constants.js');
+
+function onErrorReply(error, interaction) {
+    interaction.channel.send({
+        content: `Oops! Sorry about that <@${interaction.user.id}>, it looks like I ran into an error while processing that command. Please try again! `,
         ephermal: true,
+    }).then((msg) => {
+        setTimeout(() => msg.delete().catch((e) => { onErrorLog(e); }), ERROR_TIMEOUT_TIME);
+    }).catch((e) => {
+        onErrorLog(e);
     });
+    onErrorLog(error);
 }
 
-async function onErrorLog(error) {
+function onErrorLog(error) {
     console.log(error);
 }
 
