@@ -1,10 +1,11 @@
 const { onErrorReply, onErrorLog } = require('../utils/error.js');
 const { results } = require('../utils/results.js');
-const { TIMEOUT_TIME } = require('../utils/constants.js');
+const { TIMEOUT_TIME, ERROR_TIMEOUT_TIME, MAX_PAGE_COUNT } = require('../utils/constants.js');
 const fetch = require('node-fetch');
 
 function paginator(interaction, data, pagination, message, page, params) {
-    if (pagination.last_visible_page > 1) {
+    const last_visible_page = Math.min(MAX_PAGE_COUNT, pagination.last_visible_page);
+    if (last_visible_page > 1) {
         message.react('⏪').then(() => message.react('⏩')).catch((error) => { onErrorLog(error); });
         const reactionFilter = (reaction, user) => {
             return (
@@ -18,7 +19,7 @@ function paginator(interaction, data, pagination, message, page, params) {
         });
         collector.on('collect', async (reaction, user) => {
             if (reaction.emoji.name === '⏩') {
-                if (pagination.last_visible_page > page) {
+                if (last_visible_page > page) {
                     page++;
                     const tmp = (
                         await fetch(
@@ -69,11 +70,10 @@ function paginator(interaction, data, pagination, message, page, params) {
                     .editReply('Timeout error, please try again')
                     .then((msg) => {
                         msg.reactions.removeAll().catch((error) => { onErrorLog(error); });
-                        setTimeout(() => msg.delete().catch((error) => { onErrorLog(error); }), 10000);
+                        setTimeout(() => msg.delete().catch((error) => { onErrorLog(error); }), ERROR_TIMEOUT_TIME);
                     })
                     .catch((error) => {
                         onErrorReply(error, interaction);
-                        console.log('error was here');
                     });
             }
         });
